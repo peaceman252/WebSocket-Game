@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>example2</title>
+		<meta charset="utf-8">
+		<link rel="stylesheet" type="text/css" href="styles.css">
+		<script type="text/javascript" src="./classes/ball.html"></script>
+	</head>
+	<body onkeydown="keyPress(event)" >
+		<h1>Socket.io Client->Server->Client Demo</h1>
+		<canvas id="myCanvas" width="600" height="600"
+			style="border:1px solid #000000;" >
+   
+  </canvas>
+		<script src='/socket.io/socket.io.js'></script>
+		<script>
+			var x = Math.floor((Math.random() * 550) + 50);
+            var y = Math.floor((Math.random() * 550) + 50);
+            var dy = 5;
+			var snd = new Audio("Tokyo Drift - Teriyaki Boyz.mp3");
+            var dx = 5;
+			var vx = 2;
+			var vy = 1;
+            var WIDTH = 600;
+            var HEIGHT = 600;
+            var c = document.getElementById("myCanvas");
+            var ctx = c.getContext("2d");
+			var ball2 = new Ball(30, "black");
+			ball2.x = c.height/2;
+			ball2.y = c.width/2;
+            
+			  	//store the x, y pos of all players
+			var balls = {};
+			snd.play();
+            var socket = io.connect();
+			  
+			  	//update the position of all players
+			  	socket.on('allBalls', function(newBalls){
+					balls = newBalls;
+				});
+			  
+			  	//update the position of just one player
+			  	socket.on('ballUpdate', function(id,pos){
+					balls[id] = pos;
+				});
+        
+			  	//draw loop
+            function draw() {
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+					 //draw each player as a rectangle
+					 for(ball in balls){
+						var col;
+						 //draw this client as red, all others as blue
+						 if(ball === socket.id){
+							col = "red";
+						 }
+						 else{
+							 col = "blue";
+						 }
+						 var ball1 = new Ball(30, col);
+						 ball1.x = balls[ball].x;
+						 ball2.x += vx;
+						 ball1.y = balls[ball].y;
+						 ball2.y += vy;
+						 ball1.draw(ctx);
+						 ball2.draw(ctx);
+						 if (ball2.x > c.width - 30 || ball2.x < 30){
+							vx = -vx;
+							}
+			
+						if (ball2.y > c.height - 30 || ball2.y < 30){
+							vy = -vy;
+						}
+						var collide = (Math.pow(ball2.x-ball1.x, 2) + Math.pow(ball2.y-ball1.y, 2));
+						if (collide <4000)
+						{
+							if(ball === socket.id){
+								socket.disconnect();
+								snd.pause();
+								document.getElementById("text").innerHTML =  "You lose";
+							}
+							
+						}
+
+					}
+            }
+            
+			  	//handle key presses for movement
+            function keyPress(e){
+                switch (e.keyCode) {
+                    case 38:  // Up arrow 
+                        if (y - dy > 0 + 25){
+                            y -= dy;
+                            socket.emit('moved', {x : x, y: y});
+                        }
+                        break;
+                    case 40:  // Down arrow
+                        if (y + dy < HEIGHT-25){
+                            y += dy;
+                            socket.emit('moved', {x : x, y: y});
+                        }
+                        break;
+                    case 37:  // Left arrow
+                        if (x - dx > 0 +25){
+                            x -= dx;
+                            socket.emit('moved', {x : x, y: y});
+                        }
+                        break;
+                    case 39:  // Right arrow
+                        if (x + dx < WIDTH-25){
+                            x += dx;
+                            socket.emit('moved', {x : x, y: y});
+                        }
+                        break;
+                }
+                e.preventDefault();
+            }
+            
+			  
+			   //redraw the screen every 10 milliseconds
+            setInterval(draw, 10); 
+		</script>
+		
+  <p id="text"></p>
+		
+		
+	</body>
+</html>
